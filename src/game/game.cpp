@@ -1,7 +1,5 @@
 ﻿#include "game.hpp"
 
-#include <concepts>
-
 #include "engine/window_glfw.hpp"
 
 
@@ -39,11 +37,15 @@ void Game::initVulkan() {
 	auto extensionProperties = context.enumerateInstanceExtensionProperties();
 	for (uint32_t i = 0; i < extensionCount; ++i)
 	{
-		if (std::ranges::none_of(extensionProperties,
-								 [extension = extensions[i]](auto const& extensionProperty)
-								 { return strcmp(extensionProperty.extensionName, extension) == 0; }))
-		{
-			throw std::runtime_error("Required extension not supported: " + std::string(glfwExtensions[i]));
+		bool extensionSupported = false;
+		for (size_t j = 0; j < extensionProperties.size(); ++j) {
+			if (strcmp(extensionProperties[j].extensionName, glfwExtensions[i])) {
+				extensionSupported = true;
+				break;
+			}
+		}
+		if (!extensionSupported) {
+			throw std::runtime_error("Extension not supported: " + std::string(glfwExtensions[i]));
 		}
 	}
 
