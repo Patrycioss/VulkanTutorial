@@ -39,7 +39,7 @@ void Game::initVulkan() {
 	{
 		bool extensionSupported = false;
 		for (size_t j = 0; j < extensionProperties.size(); ++j) {
-			if (strcmp(extensionProperties[j].extensionName, glfwExtensions[i])) {
+			if (strcmp(extensionProperties[j].extensionName, glfwExtensions[i]) == 0) {
 				extensionSupported = true;
 				break;
 			}
