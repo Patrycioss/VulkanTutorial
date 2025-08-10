@@ -1,9 +1,8 @@
-﻿#include "example.hpp"
+﻿#include "game/game.hpp"
 
-#include "engine/window_glfw.hpp"
+// #define VULKAN_HPP_NO_EXCEPTIONS
 
 int main() {
-	std::unique_ptr<Window> window = std::make_unique<WindowGLFW>(600,500,"Hi Planet");
-	window->init();
-	
+	Game game{};
+	game.start();
 }

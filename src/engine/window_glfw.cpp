@@ -1,27 +1,31 @@
-﻿#include <vector>
+﻿#include <functional>
+#include <vector>
 #include <engine/window_glfw.hpp>
 #include <vulkan/vulkan.hpp>
 
-WindowGLFW::WindowGLFW(const int width, const int height, std::string title): size(width, height), title(std::move(title)) {
+
+WindowGLFW::WindowGLFW(const Vec2i size, std::string title): size(size), title(std::move(title)) {
+	glfwInit();
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+	window = glfwCreateWindow(size.x, size.y, "Vulkan 101", nullptr, nullptr);
+	// Todo: Set glfw input callbacks
+
+	auto glfwExtensionCount = 0u;
+	const auto glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+	extensions = {glfwExtensions, glfwExtensions + glfwExtensionCount};
 }
 
 WindowGLFW::~WindowGLFW() {
 	glfwDestroyWindow(window);
+	glfwTerminate();
 }
 
-void WindowGLFW::init() {
-	glfwInit();
-	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	auto window = glfwCreateWindow(size.x, size.y, "Vulkan 101", nullptr, nullptr);
-
-	auto glfwExtensionCount = 0u;
-	auto glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-	std::vector<const char*> glfwExtensionsVector(glfwExtensions, glfwExtensions + glfwExtensionCount);
-	glfwExtensionsVector.push_back("VK_EXT_debug_utils");
-	glfwExtensionsVector.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-
+void WindowGLFW::init(const std::function<void()>& mainLoop) {
+	
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
+		mainLoop();
 	}
 }
 
@@ -35,4 +39,12 @@ int WindowGLFW::getHeight() {
 
 Vec2i WindowGLFW::getSize() {
 	return size;
+}
+
+VkResult WindowGLFW::createVKSurface(const VkInstance& instance, VkSurfaceKHR* surface) const {
+	return glfwCreateWindowSurface(instance, window, nullptr, surface);
+}
+
+const std::vector<const char*>& WindowGLFW::getVkExtensions() {
+	return extensions;
 }
