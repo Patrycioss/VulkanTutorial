@@ -6,6 +6,7 @@
 Game::Game() {
 	constexpr Vec2i windowSize{600,500};
 	window = new WindowGLFW(windowSize, "Vulkan Setup!");
+	initVulkan();
 }
 
 Game::~Game() {
@@ -32,27 +33,27 @@ void Game::initVulkan() {
 	auto& glfwExtensions = window->getVkExtensions();
 	
 	extensions.insert(std::end(extensions), std::begin(glfwExtensions), std::end(glfwExtensions));
-	const uint32_t extensionCount{static_cast<uint32_t>(glfwExtensions.size())};
+	const uint32_t extensionCount{static_cast<uint32_t>(extensions.size())};
 
 	auto extensionProperties = context.enumerateInstanceExtensionProperties();
 	for (uint32_t i = 0; i < extensionCount; ++i)
 	{
 		bool extensionSupported = false;
 		for (size_t j = 0; j < extensionProperties.size(); ++j) {
-			if (strcmp(extensionProperties[j].extensionName, glfwExtensions[i]) == 0) {
+			if (strcmp(extensionProperties[j].extensionName, extensions[i]) == 0) {
 				extensionSupported = true;
 				break;
 			}
 		}
 		if (!extensionSupported) {
-			throw std::runtime_error("Extension not supported: " + std::string(glfwExtensions[i]));
+			throw std::runtime_error("Extension not supported: " + std::string(extensions[i]));
 		}
 	}
 
 	const vk::InstanceCreateInfo instanceCreateInfo{
 		.pApplicationInfo =  &appInfo,
 		.enabledExtensionCount = extensionCount,
-		.ppEnabledExtensionNames = glfwExtensions.data(),
+		.ppEnabledExtensionNames = extensions.data(),
 	};
 
 	instance = vk::raii::Instance(context, instanceCreateInfo);
