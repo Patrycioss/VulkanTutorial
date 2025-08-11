@@ -87,7 +87,11 @@ file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/src/*.cpp)
 
 
 add_executable(${CMAKE_PROJECT_NAME} ${HEADERS} ${SOURCES})
-target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC ASSETS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/assets/")
+target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC ASSETS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/assets/" $<$<CONFIG:Debug>:WW_DEBUG>
+        $<$<CONFIG:RelWithDebInfo>:WW_DEBUG>
+        $<$<CONFIG:Release>:WW_RELEASE>
+        $<$<CONFIG:MinSizeRel>:WW_RELEASE>)
+
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE include)
 target_link_libraries(${CMAKE_PROJECT_NAME} VulkanCppModule glfw)
 

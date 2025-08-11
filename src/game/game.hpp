@@ -12,6 +12,9 @@ private: // Member Variables
 
 	vk::raii::Context context;
 	vk::raii::Instance instance = nullptr;
+#ifdef WW_DEBUG
+	vk::raii::DebugUtilsMessengerEXT debugMessenger = nullptr;
+#endif
 
 public: // Public Functions
 	Game();
@@ -25,4 +28,8 @@ public: // Public Functions
 
 private: // Private Methods
 	void initVulkan();
+	void createInstance();
+#ifdef WW_DEBUG
+	void setupDebugMessenger();
+#endif
 };
