@@ -1,8 +1,6 @@
 ﻿#include "game.hpp"
 
-#ifdef WW_DEBUG
 #include <iostream>
-#endif
 
 #include "engine/window_glfw.hpp"
 
@@ -35,9 +33,8 @@ void Game::start() {
 
 void Game::initVulkan() {
 	createInstance();
-#ifdef WW_DEBUG
 	setupDebugMessenger();
-#endif
+	pickPhysicalDevice();
 }
 
 void Game::createInstance() {
@@ -49,10 +46,7 @@ void Game::createInstance() {
 		.apiVersion = vk::ApiVersion14,
 	};
 
-	std::vector<const char*> requiredLayers;
-#ifdef WW_DEBUG
 	requiredLayers.push_back("VK_LAYER_KHRONOS_validation");
-#endif
 
 	for (const auto& layer : requiredLayers) {
 		bool layerCompatible = false;
@@ -63,21 +57,12 @@ void Game::createInstance() {
 			}
 		}
 		if (!layerCompatible) {
-#ifdef WW_DEBUG
 			throw std::runtime_error("Layer not supported: " + std::string(layer));
-#else
-			exit(1);
-#endif
 		}
 	}
 
-	std::vector<const char*> extensions{};
-
-#ifdef WW_DEBUG
-	extensions.push_back(vk::EXTDebugUtilsExtensionName);
-#endif
-
 	auto& glfwExtensions = window->getVkExtensions();
+	extensions.push_back(vk::EXTDebugUtilsExtensionName);
 
 	extensions.insert(std::end(extensions), std::begin(glfwExtensions), std::end(glfwExtensions));
 	const uint32_t extensionCount{static_cast<uint32_t>(extensions.size())};
@@ -85,33 +70,27 @@ void Game::createInstance() {
 	auto extensionProperties = context.enumerateInstanceExtensionProperties();
 	for (uint32_t i = 0; i < extensionCount; ++i) {
 		bool extensionSupported = false;
-		for (size_t j = 0; j < extensionProperties.size(); ++j) {
-			if (strcmp(extensionProperties[j].extensionName, extensions[i]) == 0) {
+		for (auto& [extensionName, specVersion] : extensionProperties) {
+			if (strcmp(extensionName, extensions[i]) == 0) {
 				extensionSupported = true;
 				break;
 			}
 		}
 		if (!extensionSupported) {
-#ifdef WW_DEBUG
 			throw std::runtime_error("Extension not supported: " + std::string(extensions[i]));
-#else
-			exit(1);
-#endif
 		}
 	}
 
-	const vk::InstanceCreateInfo instanceCreateInfo{
+	const vk::InstanceCreateInfo createInfo{
 		.pApplicationInfo = &appInfo,
 		.enabledLayerCount = static_cast<uint32_t>(requiredLayers.size()),
 		.ppEnabledLayerNames = requiredLayers.data(),
-		.enabledExtensionCount = extensionCount,
-		.ppEnabledExtensionNames = extensions.data(),
+		.enabledExtensionCount = static_cast<uint32_t>(extensions.size()),
+		.ppEnabledExtensionNames = extensions.data()
 	};
-
-	instance = vk::raii::Instance(context, instanceCreateInfo);
+	instance = vk::raii::Instance(context, createInfo);
 }
 
-#ifdef WW_DEBUG
 void Game::setupDebugMessenger() {
 	constexpr vk::DebugUtilsMessageSeverityFlagsEXT severityFlags(
 		vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
@@ -126,4 +105,85 @@ void Game::setupDebugMessenger() {
 	};
 	debugMessenger = instance.createDebugUtilsMessengerEXT(debugUtilsMessengerCreateInfoEXT);
 }
-#endif
+
+void Game::pickPhysicalDevice() {
+	auto devices = instance.enumeratePhysicalDevices();
+	if (devices.empty()) {
+		throw std::runtime_error("Failed to find GPUs with Vulkan support!");
+	}
+
+	for (const auto& device : devices) {
+		bool supportsVulkan1_4 = device.getProperties().apiVersion >= VK_API_VERSION_1_4;
+
+		bool supportsGraphics = false;
+		auto queueFamilies = device.getQueueFamilyProperties();
+		for (auto& queueFamily : queueFamilies) {
+			if (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) {
+			}
+			supportsGraphics = true;
+			break;
+		}
+
+		auto availableDeviceExtensions = device.enumerateDeviceExtensionProperties();
+		bool supportsAllRequiredExtensions =
+			std::ranges::all_of(deviceExtensions,
+			                    [&availableDeviceExtensions](auto const& requiredDeviceExtension) {
+				                    return std::ranges::any_of(availableDeviceExtensions,
+				                                               [requiredDeviceExtension](auto const& availableDeviceExtension) {
+					                                               return strcmp(availableDeviceExtension.extensionName, requiredDeviceExtension) ==
+						                                               0;
+				                                               });
+			                    });
+
+		auto features = device.getFeatures2<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features,
+		                                    vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>();
+		bool supportsRequiredFeatures = features.get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering &&
+			features.get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().extendedDynamicState;
+
+		if (supportsVulkan1_4 && supportsGraphics && supportsAllRequiredExtensions && supportsRequiredFeatures) {
+			physicalDevice = device;
+			break;
+		}
+	}
+
+	if (physicalDevice == nullptr) {
+		printf("failed to find a suitable gpu");
+	}
+}
+
+void Game::createLogicalDevice() {
+	// find the index of the first queue family that supports graphics
+	std::vector<vk::QueueFamilyProperties> queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
+
+	// get the first index into queueFamilyProperties which supports graphics
+	auto graphicsQueueFamilyProperty = std::ranges::find_if(queueFamilyProperties,
+	                                                        [](auto const& qfp) {
+		                                                        return (qfp.queueFlags & vk::QueueFlagBits::eGraphics) != static_cast<vk::QueueFlags>(
+			                                                        0);
+	                                                        });
+	assert(graphicsQueueFamilyProperty != queueFamilyProperties.end() && "No graphics queue family found!");
+
+	auto graphicsIndex = static_cast<uint32_t>(std::distance(queueFamilyProperties.begin(), graphicsQueueFamilyProperty));
+
+	// query for Vulkan 1.3 features
+	vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>
+		featureChain = {
+			{}, // vk::PhysicalDeviceFeatures2
+			{.dynamicRendering = true}, // vk::PhysicalDeviceVulkan13Features
+			{.extendedDynamicState = true} // vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT
+		};
+
+	// create a Device
+	float queuePriority = 0.0f;
+	vk::DeviceQueueCreateInfo deviceQueueCreateInfo{.queueFamilyIndex = graphicsIndex, .queueCount = 1, .pQueuePriorities = &queuePriority};
+	vk::DeviceCreateInfo deviceCreateInfo{
+		.pNext = &featureChain.get<vk::PhysicalDeviceFeatures2>(),
+		.queueCreateInfoCount = 1,
+		.pQueueCreateInfos = &deviceQueueCreateInfo,
+		.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size()),
+		.ppEnabledExtensionNames = deviceExtensions.data()
+	};
+
+	device = vk::raii::Device(physicalDevice, deviceCreateInfo);
+	graphicsQueue = vk::raii::Queue(device, graphicsIndex, 0);
+}

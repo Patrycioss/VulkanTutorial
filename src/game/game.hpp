@@ -12,9 +12,22 @@ private: // Member Variables
 
 	vk::raii::Context context;
 	vk::raii::Instance instance = nullptr;
-#ifdef WW_DEBUG
+	vk::raii::PhysicalDevice physicalDevice = nullptr;
+	vk::raii::Device device = nullptr;
+	vk::raii::Queue graphicsQueue = nullptr;
+
+	std::vector<const char*> requiredLayers{};
+	std::vector<const char*> extensions{};
+	
 	vk::raii::DebugUtilsMessengerEXT debugMessenger = nullptr;
-#endif
+
+	std::vector<const char*> deviceExtensions = {
+		vk::KHRSwapchainExtensionName,
+		vk::KHRSpirv14ExtensionName,
+		vk::KHRSynchronization2ExtensionName,
+		vk::KHRCreateRenderpass2ExtensionName
+	};
+
 
 public: // Public Functions
 	Game();
@@ -29,7 +42,7 @@ public: // Public Functions
 private: // Private Methods
 	void initVulkan();
 	void createInstance();
-#ifdef WW_DEBUG
 	void setupDebugMessenger();
-#endif
+	void pickPhysicalDevice();
+	void createLogicalDevice();
 };
