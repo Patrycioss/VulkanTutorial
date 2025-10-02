@@ -1,5 +1,6 @@
 ﻿#include "game.hpp"
 
+#include <fstream>
 #include <iostream>
 
 #include "engine/window_glfw.hpp"
@@ -246,6 +247,22 @@ void Game::createImageViews() {
     }
 }
 
+void Game::createGraphicsPipeline() {
+    const vk::raii::ShaderModule shaderModule = createShaderModule(readFile("shaders/slang.spv"));
+
+    const vk::PipelineShaderStageCreateInfo vertShaderStageInfo{ .stage = vk::ShaderStageFlagBits::eVertex, .module = shaderModule,  .pName = "vertMain" };
+    const vk::PipelineShaderStageCreateInfo fragShaderStageInfo{ .stage = vk::ShaderStageFlagBits::eFragment, .module = shaderModule, .pName = "fragMain" };
+    vk::PipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
+}
+
+vk::raii::ShaderModule Game::createShaderModule(const std::vector<char>& code) const {
+    const vk::ShaderModuleCreateInfo createInfo{ .codeSize = code.size() * sizeof(char), .pCode = reinterpret_cast<const uint32_t*>(code.data()) };
+    vk::raii::ShaderModule shaderModule{ device, createInfo };
+
+    return shaderModule;
+}
+
+
 uint32_t Game::chooseSwapMinImageCount(vk::SurfaceCapabilitiesKHR const &surfaceCapabilities) {
     auto minImageCount = std::max(3u, surfaceCapabilities.minImageCount);
     if ((0 < surfaceCapabilities.maxImageCount) && (surfaceCapabilities.maxImageCount < minImageCount)) {
@@ -285,4 +302,16 @@ vk::Extent2D Game::chooseSwapExtent(const vk::SurfaceCapabilitiesKHR &capabiliti
         std::clamp<uint32_t>(width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
         std::clamp<uint32_t>(height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height)
     };
+}
+
+std::vector<char> Game::readFile(const std::string& filename) {
+    std::ifstream file(filename, std::ios::ate | std::ios::binary);
+    if (!file.is_open()) {
+        throw std::runtime_error("failed to open file!");
+    }
+    std::vector<char> buffer(file.tellg());
+    file.seekg(0, std::ios::beg);
+    file.read(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+    file.close();
+    return buffer;
 }
