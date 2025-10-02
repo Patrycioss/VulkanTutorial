@@ -30,7 +30,7 @@ public: // Public Functions
     int getHeight() override;
     Vec2i getSize() override;
 
-    VkResult createVKSurface(const VkInstance& instance, VkSurfaceKHR* surface) const override;
+    vk::raii::SurfaceKHR createVKSurface(const vk::raii::Instance& instance) const override;
     const std::vector<const char*>& getVkExtensions() override;
 
 private: // Private Methods

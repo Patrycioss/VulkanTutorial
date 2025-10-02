@@ -18,8 +18,11 @@ private: // Member Variables
 
 	std::vector<const char*> requiredLayers{};
 	std::vector<const char*> extensions{};
-	
+
 	vk::raii::DebugUtilsMessengerEXT debugMessenger = nullptr;
+
+	vk::raii::SurfaceKHR surface = nullptr;
+	vk::raii::Queue presentQueue = nullptr;
 
 	std::vector<const char*> deviceExtensions = {
 		vk::KHRSwapchainExtensionName,
@@ -43,6 +46,7 @@ private: // Private Methods
 	void initVulkan();
 	void createInstance();
 	void setupDebugMessenger();
+	void createSurface();
 	void pickPhysicalDevice();
 	void createLogicalDevice();
 };
