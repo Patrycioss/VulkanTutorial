@@ -1,5 +1,5 @@
 ﻿cmake_minimum_required(VERSION 3.29)
-project(woodwork LANGUAGES CXX C)
+project(vulkan-tutorial LANGUAGES CXX C)
 set(CMAKE_CXX_SCAN_FOR_MODULES ON)
 set(CMAKE_CXX_STANDARD 23)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/CMake")
