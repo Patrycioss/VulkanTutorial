@@ -22,6 +22,7 @@ private: // Member Variables
 	std::vector<vk::raii::ImageView> swapChainImageViews;
 
 	vk::raii::PipelineLayout pipelineLayout = nullptr;
+	vk::raii::Pipeline graphicsPipeline = nullptr;
 
 	std::vector<const char*> requiredLayers{};
 	std::vector<const char*> extensions{};
