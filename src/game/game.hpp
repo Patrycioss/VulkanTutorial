@@ -8,7 +8,7 @@ class Game {
 public: // Properties
 
 private: // Member Variables
-	Window* window;
+	std::unique_ptr<Window> window;
 
 	vk::raii::Context context;
 	vk::raii::Instance instance = nullptr;

@@ -18,13 +18,11 @@ static VKAPI_ATTR vk::Bool32 VKAPI_CALL debugCallback(
 
 Game::Game() {
 	constexpr Vec2i windowSize{600, 500};
-	window = new WindowGLFW(windowSize, "Vulkan Setup!");
+	window = std::make_unique<WindowGLFW>(windowSize, "Vulkan Setup!");
 	initVulkan();
 }
 
-Game::~Game() {
-	delete window;
-}
+Game::~Game() = default;
 
 void Game::start() {
 	window->init([this]() {
@@ -112,11 +110,11 @@ void Game::pickPhysicalDevice() {
 		throw std::runtime_error("Failed to find GPUs with Vulkan support!");
 	}
 
-	for (const auto& device : devices) {
-		bool supportsVulkan1_4 = device.getProperties().apiVersion >= VK_API_VERSION_1_4;
+	for (const auto& deviceToCheck : devices) {
+		bool supportsVulkan1_4 = deviceToCheck.getProperties().apiVersion >= VK_API_VERSION_1_4;
 
 		bool supportsGraphics = false;
-		auto queueFamilies = device.getQueueFamilyProperties();
+		auto queueFamilies = deviceToCheck.getQueueFamilyProperties();
 		for (auto& queueFamily : queueFamilies) {
 			if (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) {
 			}
@@ -124,7 +122,7 @@ void Game::pickPhysicalDevice() {
 			break;
 		}
 
-		auto availableDeviceExtensions = device.enumerateDeviceExtensionProperties();
+		auto availableDeviceExtensions = deviceToCheck.enumerateDeviceExtensionProperties();
 		bool supportsAllRequiredExtensions =
 			std::ranges::all_of(deviceExtensions,
 			                    [&availableDeviceExtensions](auto const& requiredDeviceExtension) {
@@ -135,13 +133,13 @@ void Game::pickPhysicalDevice() {
 				                                               });
 			                    });
 
-		auto features = device.getFeatures2<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features,
+		auto features = deviceToCheck.getFeatures2<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features,
 		                                    vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>();
 		bool supportsRequiredFeatures = features.get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering &&
 			features.get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().extendedDynamicState;
 
 		if (supportsVulkan1_4 && supportsGraphics && supportsAllRequiredExtensions && supportsRequiredFeatures) {
-			physicalDevice = device;
+			physicalDevice = deviceToCheck;
 			break;
 		}
 	}
