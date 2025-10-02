@@ -27,6 +27,29 @@ Game::~Game() = default;
 
 void Game::start() {
     window->init([this]() {
+        queue.waitIdle();
+
+       auto [result, imageIndex] = swapChain.acquireNextImage( UINT64_MAX, *presentCompleteSemaphore, nullptr );
+       recordCommandBuffer(imageIndex);
+
+       device.resetFences(  *drawFence );
+       vk::PipelineStageFlags waitDestinationStageMask( vk::PipelineStageFlagBits::eColorAttachmentOutput );
+       const vk::SubmitInfo submitInfo{ .waitSemaphoreCount = 1, .pWaitSemaphores = &*presentCompleteSemaphore,
+                           .pWaitDstStageMask = &waitDestinationStageMask, .commandBufferCount = 1, .pCommandBuffers = &*commandBuffer,
+                           .signalSemaphoreCount = 1, .pSignalSemaphores = &*renderFinishedSemaphore };
+       queue.submit(submitInfo, *drawFence);
+       while ( vk::Result::eTimeout == device.waitForFences( *drawFence, vk::True, UINT64_MAX ) )
+           ;
+
+       const vk::PresentInfoKHR presentInfoKHR{ .waitSemaphoreCount = 1, .pWaitSemaphores = &*renderFinishedSemaphore,
+                                               .swapchainCount = 1, .pSwapchains = &*swapChain, .pImageIndices = &imageIndex };
+       result = queue.presentKHR( presentInfoKHR );
+       switch ( result )
+       {
+           case vk::Result::eSuccess: break;
+           case vk::Result::eSuboptimalKHR: std::cout << "vk::Queue::presentKHR returned vk::Result::eSuboptimalKHR !\n"; break;
+           default: break;  // an unexpected result is returned!
+       }
     });
 }
 
@@ -41,6 +64,7 @@ void Game::initVulkan() {
     createGraphicsPipeline();
     createCommandPool();
     createCommandBuffer();
+    createSyncObjects();
 }
 
 void Game::createInstance() {
@@ -210,8 +234,7 @@ void Game::createLogicalDevice() {
     };
 
     device = vk::raii::Device(physicalDevice, deviceCreateInfo);
-    graphicsQueue = vk::raii::Queue(device, queueIndex, 0);
-    presentQueue = vk::raii::Queue(device, queueIndex, 0);
+    queue = vk::raii::Queue(device, queueIndex, 0);
 }
 
 void Game::createSwapChain() {
@@ -411,6 +434,13 @@ void Game::transition_image_layout(
     };
     commandBuffer.pipelineBarrier2(dependency_info);
 }
+
+void Game::createSyncObjects() {
+    presentCompleteSemaphore =vk::raii::Semaphore(device, vk::SemaphoreCreateInfo());
+    renderFinishedSemaphore = vk::raii::Semaphore(device, vk::SemaphoreCreateInfo());
+    drawFence = vk::raii::Fence(device, {.flags = vk::FenceCreateFlagBits::eSignaled});
+}
+
 
 vk::raii::ShaderModule Game::createShaderModule(const std::vector<char> &code) const {
     const vk::ShaderModuleCreateInfo createInfo{

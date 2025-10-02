@@ -15,7 +15,7 @@ private: // Member Variables
     vk::raii::PhysicalDevice physicalDevice = nullptr;
     vk::raii::Device device = nullptr;
     uint32_t queueIndex = ~0;
-    vk::raii::Queue graphicsQueue = nullptr;
+    vk::raii::Queue queue = nullptr;
     vk::raii::SwapchainKHR swapChain = nullptr;
     std::vector<vk::Image> swapChainImages;
     vk::SurfaceFormatKHR swapChainSurfaceFormat;
@@ -27,13 +27,16 @@ private: // Member Variables
     vk::raii::CommandPool commandPool = nullptr;
     vk::raii::CommandBuffer commandBuffer = nullptr;
 
+    vk::raii::Semaphore presentCompleteSemaphore = nullptr;
+    vk::raii::Semaphore renderFinishedSemaphore = nullptr;
+    vk::raii::Fence drawFence = nullptr;
+
     std::vector<const char *> requiredLayers{};
     std::vector<const char *> extensions{};
 
     vk::raii::DebugUtilsMessengerEXT debugMessenger = nullptr;
 
     vk::raii::SurfaceKHR surface = nullptr;
-    vk::raii::Queue presentQueue = nullptr;
 
     std::vector<const char *> deviceExtensions = {
         vk::KHRSwapchainExtensionName,
@@ -69,6 +72,7 @@ private: // Private Methods
     void transition_image_layout(uint32_t currentFrame, vk::ImageLayout old_layout, vk::ImageLayout new_layout,
                                  vk::AccessFlags2 src_access_mask, vk::AccessFlags2 dst_access_mask,
                                  vk::PipelineStageFlags2 src_stage_mask, vk::PipelineStageFlags2 dst_stage_mask);
+    void createSyncObjects();
 
 
     [[nodiscard]] vk::raii::ShaderModule createShaderModule(const std::vector<char> &code) const;
