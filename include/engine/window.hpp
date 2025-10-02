@@ -2,7 +2,6 @@
 
 #include <functional>
 #include <engine/data/vec2i.hpp>
-#include <vulkan/vulkan.hpp>
 
 #include "vulkan/vulkan_raii.hpp"
 
@@ -28,6 +27,6 @@ public: // Public Functions
 
     virtual vk::raii::SurfaceKHR createVKSurface(const vk::raii::Instance& instance) const = 0;
     virtual const std::vector<const char*>& getVkExtensions() = 0;
-    
+    virtual Vec2i getFrameBufferSize() = 0;
 private: // Private Methods
 };

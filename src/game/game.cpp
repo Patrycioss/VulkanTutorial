@@ -31,9 +31,12 @@ void Game::start() {
 
 void Game::initVulkan() {
     createInstance();
-
     setupDebugMessenger();
+    createSurface();
     pickPhysicalDevice();
+    createLogicalDevice();
+    createSwapChain();
+    createImageViews();
 }
 
 void Game::createInstance() {
@@ -177,7 +180,9 @@ void Game::createLogicalDevice() {
         }
     }
 
-    assert(queueIndex == ~0 && "No graphics queue family found!");
+    if (queueIndex == ~0) {
+        throw std::runtime_error("No graphics queue family found!");
+    }
 
     // query for Vulkan 1.3 features
     vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features,
@@ -204,4 +209,80 @@ void Game::createLogicalDevice() {
     device = vk::raii::Device(physicalDevice, deviceCreateInfo);
     graphicsQueue = vk::raii::Queue(device, queueIndex, 0);
     presentQueue = vk::raii::Queue(device, queueIndex, 0);
+}
+
+void Game::createSwapChain() {
+    auto surfaceCapabilities = physicalDevice.getSurfaceCapabilitiesKHR(*surface);
+    swapChainExtent = chooseSwapExtent(surfaceCapabilities);
+    swapChainSurfaceFormat = chooseSwapSurfaceFormat(physicalDevice.getSurfaceFormatsKHR(*surface));
+    vk::SwapchainCreateInfoKHR swapChainCreateInfo{
+        .surface = *surface,
+        .minImageCount = chooseSwapMinImageCount(surfaceCapabilities),
+        .imageFormat = swapChainSurfaceFormat.format,
+        .imageColorSpace = swapChainSurfaceFormat.colorSpace,
+        .imageExtent = swapChainExtent,
+        .imageArrayLayers = 1,
+        .imageUsage = vk::ImageUsageFlagBits::eColorAttachment,
+        .imageSharingMode = vk::SharingMode::eExclusive,
+        .preTransform = surfaceCapabilities.currentTransform,
+        .compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
+        .presentMode = chooseSwapPresentMode(physicalDevice.getSurfacePresentModesKHR(*surface)),
+        .clipped = true
+    };
+
+    swapChain = vk::raii::SwapchainKHR(device, swapChainCreateInfo);
+    swapChainImages = swapChain.getImages();
+}
+
+void Game::createImageViews() {
+    assert(swapChainImageViews.empty());
+
+    vk::ImageViewCreateInfo imageViewCreateInfo{ .viewType = vk::ImageViewType::e2D, .format = swapChainSurfaceFormat.format,
+      .subresourceRange = { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 } };
+    for ( auto image : swapChainImages )
+    {
+        imageViewCreateInfo.image = image;
+        swapChainImageViews.emplace_back( device, imageViewCreateInfo );
+    }
+}
+
+uint32_t Game::chooseSwapMinImageCount(vk::SurfaceCapabilitiesKHR const &surfaceCapabilities) {
+    auto minImageCount = std::max(3u, surfaceCapabilities.minImageCount);
+    if ((0 < surfaceCapabilities.maxImageCount) && (surfaceCapabilities.maxImageCount < minImageCount)) {
+        minImageCount = surfaceCapabilities.maxImageCount;
+    }
+    return minImageCount;
+}
+
+vk::SurfaceFormatKHR Game::chooseSwapSurfaceFormat(std::vector<vk::SurfaceFormatKHR> const &availableFormats) {
+    assert(!availableFormats.empty());
+    const auto formatIt = std::ranges::find_if(
+        availableFormats,
+        [](const auto &format) {
+            return format.format == vk::Format::eB8G8R8A8Srgb && format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear;
+        });
+    return formatIt != availableFormats.end() ? *formatIt : availableFormats[0];
+}
+
+vk::PresentModeKHR Game::chooseSwapPresentMode(const std::vector<vk::PresentModeKHR> &availablePresentModes) {
+    assert(
+        std::ranges::any_of(availablePresentModes, [](auto presentMode){ return presentMode == vk::PresentModeKHR::eFifo
+            ; }));
+    return std::ranges::any_of(availablePresentModes,
+                               [](const vk::PresentModeKHR value) { return vk::PresentModeKHR::eMailbox == value; })
+               ? vk::PresentModeKHR::eMailbox
+               : vk::PresentModeKHR::eFifo;
+}
+
+vk::Extent2D Game::chooseSwapExtent(const vk::SurfaceCapabilitiesKHR &capabilities) const {
+    if (capabilities.currentExtent.width != 0xFFFFFFFF) {
+        return capabilities.currentExtent;
+    }
+
+    auto [width, height] = window->getFrameBufferSize();
+
+    return {
+        std::clamp<uint32_t>(width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
+        std::clamp<uint32_t>(height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height)
+    };
 }

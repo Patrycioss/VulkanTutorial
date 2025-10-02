@@ -15,6 +15,11 @@ private: // Member Variables
 	vk::raii::PhysicalDevice physicalDevice = nullptr;
 	vk::raii::Device device = nullptr;
 	vk::raii::Queue graphicsQueue = nullptr;
+	vk::raii::SwapchainKHR           swapChain      = nullptr;
+	std::vector<vk::Image>           swapChainImages;
+	vk::SurfaceFormatKHR             swapChainSurfaceFormat;
+	vk::Extent2D                     swapChainExtent;
+	std::vector<vk::raii::ImageView> swapChainImageViews;
 
 	std::vector<const char*> requiredLayers{};
 	std::vector<const char*> extensions{};
@@ -49,4 +54,11 @@ private: // Private Methods
 	void createSurface();
 	void pickPhysicalDevice();
 	void createLogicalDevice();
+	void createSwapChain();
+	void createImageViews();
+
+	uint32_t chooseSwapMinImageCount(vk::SurfaceCapabilitiesKHR const & surfaceCapabilities);
+	vk::SurfaceFormatKHR chooseSwapSurfaceFormat(std::vector<vk::SurfaceFormatKHR> const & availableFormats);
+	vk::PresentModeKHR chooseSwapPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes);
+	vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR &capabilities) const;
 };

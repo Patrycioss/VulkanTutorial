@@ -7,7 +7,7 @@
 
 #include "window.hpp"
 
-class WindowGLFW : public Window
+class WindowGLFW final : public Window
 {
 public: // Properties
     
@@ -19,7 +19,7 @@ private: // Member Variables
     
 public: // Public Functions
     WindowGLFW(Vec2i size, std::string title);
-    ~WindowGLFW();
+    ~WindowGLFW() override;
     
     WindowGLFW(const WindowGLFW&) = delete;
     WindowGLFW(WindowGLFW&&) = delete;
@@ -32,6 +32,7 @@ public: // Public Functions
 
     vk::raii::SurfaceKHR createVKSurface(const vk::raii::Instance& instance) const override;
     const std::vector<const char*>& getVkExtensions() override;
+    Vec2i getFrameBufferSize() override;
 
 private: // Private Methods
 };

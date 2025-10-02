@@ -51,3 +51,9 @@ vk::raii::SurfaceKHR WindowGLFW::createVKSurface(const vk::raii::Instance &insta
 const std::vector<const char *> &WindowGLFW::getVkExtensions() {
     return extensions;
 }
+
+Vec2i WindowGLFW::getFrameBufferSize() {
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+    return {width, height};
+}
