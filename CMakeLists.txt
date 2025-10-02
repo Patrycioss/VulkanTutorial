@@ -85,31 +85,8 @@ target_sources(VulkanCppModule
 file(GLOB_RECURSE HEADERS ${PROJECT_SOURCE_DIR}/include/*.hpp)
 file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/src/*.cpp)
 
-
-function (add_slang_shader_target TARGET)
-    cmake_parse_arguments ("SHADER" "" "" "SOURCES" ${ARGN})
-    set (SHADERS_DIR ${CMAKE_CURRENT_LIST_DIR}/assets/shaders)
-    set (ENTRY_POINTS -entry vertMain -entry fragMain)
-    add_custom_command (
-            OUTPUT ${SHADERS_DIR}
-            COMMAND ${CMAKE_COMMAND} -E make_directory ${SHADERS_DIR}
-    )
-    add_custom_command (
-            OUTPUT  ${SHADERS_DIR}/slang.spv
-            COMMAND ${SLANGC_EXECUTABLE} ${SHADER_SOURCES} -target spirv -profile spirv_1_4 -emit-spirv-directly -fvk-use-entrypoint-name ${ENTRY_POINTS} -o slang.spv
-            WORKING_DIRECTORY ${SHADERS_DIR}
-            DEPENDS ${SHADERS_DIR} ${SHADER_SOURCES}
-            COMMENT "Compiling Slang Shaders"
-            VERBATIM
-    )
-    add_custom_target (${TARGET} DEPENDS ${SHADERS_DIR}/slang.spv)
-endfunction()
-
-set(SHADER_SLANG_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders/shader.slang)
-
-add_slang_shader_target(shaders SOURCES ${SHADER_SLANG_SOURCES})
+file(COPY assets DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 add_executable(${CMAKE_PROJECT_NAME} ${HEADERS} ${SOURCES})
-add_dependencies(${CMAKE_PROJECT_NAME} shaders)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC ASSETS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/assets/" $<$<CONFIG:Debug>:WW_DEBUG>
         $<$<CONFIG:RelWithDebInfo>:WW_DEBUG>
         $<$<CONFIG:Release>:WW_RELEASE>
